@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+
+<meta charset = utf-8>    
+
+<html>
+<head>
+    <title>Aplikacija</title>
+</head>    
+
+<body onload = "load();">
+    
+<h3>BRANJE CENE BTC</h3>
+
+Bitstamp :
+<input id="branje1" name="branje1" type="text" onkeypress="return false;" />$
+<button id="gumbBeri1" onClick="beri1()">Beri Bitstamp</button> <br><br>
+
+Bittrex :
+<input id="branje2" name="branje2" type="text" onkeypress="return false;" />$
+<button id="gumbBeri2" onClick="beri2()">Beri Bittrex</button> <br><br>
+
+Cryptopia :
+<input id="branje3" name="branje3" type="text" onkeypress="return false;" />$
+<button id="gumbBeri3" onClick="beri3()">Beri Cryptopia</button> <br><br>
+
+Bitstamp :
+<canvas id="cv" width="400" height="200" style="border:1px dashed #000000"></canvas>
+Bittrex :
+<canvas id="cv2" width="400" height="200" style="border:1px dashed #000000"></canvas>
+Cryptopia :
+<canvas id="cv3" width="400" height="200" style="border:1px dashed #000000"></canvas>
+
+<br><br>
+Povprečje : <br><br> 
+<input id="povprecje" name="povp" type="text" onkeypress="return false;" />$ <br><br>
+
+<canvas id="cvp" width="400" height="200" style="border:1px dashed #000000"></canvas>
+
+<br>
+
+
+
+<script type="text/javascript" src="/socket.io/socket.io.js"></script>
+
+<script type="text/javascript">
+
+"use strict";
+
+var socket = io.connect("192.168.126.144:8282"); // ustvarimo socket - se povežemo
+
+var izpis = document.getElementById("izpis");
+var stevec = 0; // za štetje sporočil
+
+var p1;
+var p2;
+var p3;
+
+// ******************************** BITSTAMP **********************************
+
+function beri1 () {
+    
+    socket.emit("beriIzSpremenljivke1");
+    
+}
+
+socket.on('vrednostSpremenljivkeSstraniStrežnika1', function(msg) {
+            document.getElementById("branje1").value = msg;
+            
+// PISANJE V BAZO BITSTAMP
+            
+    var vrednost1 = document.getElementById("branje1").value;
+    
+    //var p1 = document.getElementById("branje1").value;
+    
+    graf(vrednost1);
+    
+    povprecje(p1);
+
+    socket.emit("pisiVbazo1", vrednost1);
+
+});
+
+// ******************************** BITTREX ***********************************
+
+function beri2 () {
+    
+    socket.emit("beriIzSpremenljivke2");
+    
+}
+
+socket.on('vrednostSpremenljivkeSstraniStrežnika2', function(msg) {
+            document.getElementById("branje2").value = msg;
+
+// PISANJE V BAZO BITTREX
+            
+    var vrednost2 = document.getElementById("branje2").value;
+    
+    //var p2 = document.getElementById("branje2").value;
+    
+    graf2(vrednost2);
+    
+    povprecje(p2);
+
+    socket.emit("pisiVbazo2", vrednost2);
+    
+}); 
+
+// ******************************** CRYPTOPIA *********************************
+
+function beri3 () {
+    
+    socket.emit("beriIzSpremenljivke3");
+    
+}
+
+socket.on('vrednostSpremenljivkeSstraniStrežnika3', function(msg) {
+            document.getElementById("branje3").value = msg;
+            
+// PISANJE V BAZO CRYPTOPIA
+            
+    var vrednost3 = document.getElementById("branje3").value;
+    
+    //var p3 = document.getElementById("branje3").value;
+    
+    graf3(vrednost3);
+    
+    povprecje(p3);
+
+    socket.emit("pisiVbazo3", vrednost3);
+    
+})
+
+// ********************** POVPREČJE ********************************************
+
+function povprecje(p1, p2, p3){
+    
+    p1 = document.getElementById("branje1").value;
+    
+    p2 = document.getElementById("branje2").value;
+    
+    p3 = document.getElementById("branje3").value;
+    
+    var p11= parseFloat(p1)
+    var p12= parseFloat(p2)
+    var p13= parseFloat(p3)
+    
+    var povp = (p11 + p12 + p13)/3;
+    
+    document.getElementById("povprecje").value = povp;
+    
+    grafPovp(povp);
+    
+}
+
+// ********************** BRANJE IZ TXT DATOTEKE ******************************
+/*
+function beri () {
+
+    socket.emit("beriIzBaze");
+
+}
+
+socket.on('beriBazo', function(msg) {
+
+            document.getElementById("branje").value = msg;
+
+});
+*/
+
+// ********************** GRAF BITSTAMP ***************************************
+
+var canvas;
+var ctx;
+
+canvas = document.getElementById("cv");
+ctx = canvas.getContext("2d");
+ctx.strokeStyle = "#ff0000";
+
+var x = new Array();
+var y = new Array();
+ 
+x = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,165,170,175,180,185,190,195,200,205,210,215,220,225,230,
+235,240,245,250,255,260,265,270,275,280,285,290,295,300,305,310,315,320,325,330,335,340,345,350,355,360,365,370,375,380,385,390,395,400];
+//y = [50,20,60,40,80,20,70,60,90];
+   
+ctx.beginPath();
+    
+for (var i=0; i<canvas.width; i++){
+    //x[i] = i;
+    ctx.lineTo(x[i], y[i]);
+}
+    
+function graf(vrednost1){
+    
+    var max = null; //9130
+    var min = null; //9080
+    var range = 0;
+    var yPx = 200; // število px po y osi
+    var podatekSkaliran1;
+    var maxGraphX = 79;
+    //var maxGraphY = canvas.height;
+    
+    var len;
+    
+    if (y.length == maxGraphX+1) { // če je platno vel 10x10 imamo 11x11 točk (začnemo z 0)
+        y.splice(0, 1); // na mestu 0 v polju y brišemo eno vrednost
+        y[maxGraphX] = vrednost1; // novo vrednost dodamo na koncu polja
+    }
+    else {
+        y.push(vrednost1); // če polje še ni napolnjeno potisnemo novo vrednost v polje
+    }
+    
+    //y.splice(0, 1);
+    //y[9] = podatek1;
+    for (i = 0, len = y.length; i < len; i++) {
+        
+        var elem = y[i];
+    	if (min === null || min > elem) min = elem;
+    	if (max === null || max < elem) max = elem;
+    }
+    
+    range = (max-min);
+    
+    //console.log("min = " + min);
+    //console.log("max = " + max);
+    
+    //y[i] = i++;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.beginPath();
+    
+    ctx.font = "15px Arial";
+    ctx.fillText(max,0,15);
+    ctx.fillText(min,0,195);
+    
+    for (i = 0, len = y.length; i < len; i++) {
+    //  var elem = y[i];
+    //	if (min === null || min > elem) min = elem;
+    //	if (max === null || max < elem) max = elem;
+    	//ctx.lineTo(x[i], y[i]);
+    	
+    	if(min === null || min > vrednost1) min = parseFloat(vrednost1);
+    	if(max === null || max < vrednost1) max = parseFloat(vrednost1);
+    	
+	}
+    
+    for (var i=0; i<y.length; i++) {
+        podatekSkaliran1 = ((max - y[i])/range)*yPx;
+        ctx.lineTo(x[i], podatekSkaliran1);
+    }
+    
+    ctx.stroke();
+    
+    //var timerVar = setTimeout(zanka, 400);
+}
+    
+function load() {
+    
+    ctx.beginPath();
+    
+    ctxb.beginPath();
+    
+    ctxc.beginPath();
+    
+    for (var i=0; i<y.length; i++) {
+        ctx.lineTo(x[i], y[i]); 
+    }
+    
+    for(var j=0; j<yb.length; j++){
+        ctxb.lineTo(xb[j], yb[j]);
+    }
+    
+    for(var c=0; c<yc.length; c++){
+        ctxc.lineTo(xc[c], yc[c]);
+    }
+    
+    ctx.stroke();
+    
+    ctxb.stroke();
+    
+    ctxc.stroke();
+    
+    //zanka();
+
+}
+
+// ********************** GRAF BITTREX ***************************************
+
+var canvasb;
+var ctxb;
+
+canvasb = document.getElementById("cv2");
+ctxb = canvasb.getContext("2d");
+ctxb.strokeStyle = "#ff0000";
+
+var xb = new Array();
+var yb = new Array();
+ 
+xb = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,165,170,175,180,185,190,195,200,205,210,215,220,225,230,
+235,240,245,250,255,260,265,270,275,280,285,290,295,300,305,310,315,320,325,330,335,340,345,350,355,360,365,370,375,380,385,390,395,400];
+//y = [50,20,60,40,80,20,70,60,90];
+   
+ctxb.beginPath();
+    
+for (var j=0; j<canvasb.width; j++){
+    //x[i] = i;
+    ctxb.lineTo(xb[j], yb[j]);
+}
+    
+function graf2(vrednost2){
+    
+    var maxb = null; //9130
+    var minb = null; //9080
+    var rangeb = 0;
+    var yPxb = 200; // število px po y osi
+    var podatekSkaliran1b;
+    var maxGraphB = 79;
+    //var maxGraphY = canvas.height;
+    
+    var lenb;
+    
+    if (yb.length == maxGraphB+1) { // če je platno vel 10x10 imamo 11x11 točk (začnemo z 0)
+        yb.splice(0, 1); // na mestu 0 v polju y brišemo eno vrednost
+        yb[maxGraphB] = vrednost2; // novo vrednost dodamo na koncu polja
+    }
+    else {
+        yb.push(vrednost2); // če polje še ni napolnjeno potisnemo novo vrednost v polje
+    }
+    
+    //y.splice(0, 1);
+    //y[9] = podatek1;
+    for (j = 0, lenb = yb.length; j < lenb; j++) {
+        
+        var elemb = yb[j];
+    	if (minb === null || minb > elemb) minb = elemb;
+    	if (maxb === null || maxb < elemb) maxb = elemb;
+    }
+    
+    rangeb = (maxb-minb);
+    
+    //console.log("min = " + min);
+    //console.log("max = " + max);
+    
+    //y[i] = i++;
+    
+    ctxb.clearRect(0, 0, canvasb.width, canvasb.height);
+    
+    ctxb.beginPath();
+    
+    ctxb.font = "15px Arial";
+    ctxb.fillText(maxb,0,15);
+    ctxb.fillText(minb,0,195);
+    
+    for (j = 0, lenb = yb.length; j < lenb; j++) {
+    //  var elem = y[i];
+    //	if (min === null || min > elem) min = elem;
+    //	if (max === null || max < elem) max = elem;
+    	//ctx.lineTo(x[i], y[i]);
+    	
+    	if(minb === null || minb > vrednost2) minb = parseFloat(vrednost2);
+    	if(maxb === null || maxb < vrednost2) maxb = parseFloat(vrednost2);
+    	
+	}
+    
+    for (var j=0; j<yb.length; j++) {
+        podatekSkaliran1b = ((maxb - yb[j])/rangeb)*yPxb;
+        ctxb.lineTo(xb[j], podatekSkaliran1b);
+    }
+    
+    ctxb.stroke();
+    
+}
+
+// ********************** GRAF CRYPTOPIA ***************************************
+
+var canvasc;
+var ctxc;
+
+canvasc = document.getElementById("cv3");
+ctxc = canvasc.getContext("2d");
+ctxc.strokeStyle = "#ff0000";
+
+var xc = new Array();
+var yc = new Array();
+
+xc = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,165,170,175,180,185,190,195,200,205,210,215,220,225,230,
+235,240,245,250,255,260,265,270,275,280,285,290,295,300,305,310,315,320,325,330,335,340,345,350,355,360,365,370,375,380,385,390,395,400];
+
+ctxc.beginPath();
+
+for (var c=0; c<canvasc.width; c++){
+    ctxc.lineTo(xc[c], yc[c]);
+}
+
+function graf3(vrednost3){
+    
+    var maxc = null;
+    var minc = null;
+    var rangec = 0;
+    var yPxc = 200;
+    var podatekSkaliranc;
+    var maxGraphc = 79;
+    
+    var lenc;
+    
+    if(yc.length == maxGraphc+1){
+        yc.splice(0,1);
+        yc[maxGraphc] = vrednost3;
+    }
+    else {
+        yc.push(vrednost3);
+    }
+    
+    for(c=0, lenc=yc.length; c<lenc; c++){
+        var elemc = yc[c];
+        if (minc === null || minc > elemc) minc = elemc;
+        if (maxc === null || maxc <elemc) maxc = elemc;
+    }
+    
+    rangec = (maxc - minc);
+    
+    ctxc.clearRect(0,0,canvasc.width,canvasc.height);
+    
+    ctxc.beginPath();
+    
+    ctxc.font = "15px Arial";
+    ctxc.fillText(maxc,0,15);
+    ctxc.fillText(minc,0,195); 
+    
+    for(c=0, lenc = yc.length; c < lenc; c++){
+        if(minc === null || minc > vrednost3) minc = parseFloat(vrednost3);
+        if(maxc === null || maxc < vrednost3) maxc = parseFloat(vrednost3);
+    }
+    
+    for(var c=0; c < yc.length; c++){
+        podatekSkaliranc = ((maxc - yc[c])/rangec)*yPxc;
+        ctxc.lineTo(xc[c], podatekSkaliranc);
+    }
+    
+    ctxc.stroke();
+    
+}
+
+// ********************** GRAF POVPREČJE ***************************************
+
+var canvasp;
+var ctxp;
+
+canvasp = document.getElementById("cvp");
+ctxp = canvasp.getContext("2d");
+ctxp.strokeStyle = "#ff0000";
+
+var xp = new Array();
+var yp = new Array();
+
+xp = [0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,165,170,175,180,185,190,195,200,205,210,215,220,225,230,
+235,240,245,250,255,260,265,270,275,280,285,290,295,300,305,310,315,320,325,330,335,340,345,350,355,360,365,370,375,380,385,390,395,400];
+
+ctxp.beginPath();
+
+for (var p=0; p < canvasp.width; p++){
+    ctxp.lineTo(xp[p], yp[p]);
+}
+
+function grafPovp(povp){
+    
+    var maxp = null;
+    var minp = null;
+    var rangep = 0;
+    var yPxp = 200;
+    var podatekSkaliranp;
+    var maxGraphp = 79;
+    
+    var lenp;
+    
+    if(yp.length == maxGraphp+1){
+        yp.splice(0,1);
+        yp[maxGraphp] = povp;
+    }
+    else {
+        yp.push(povp);
+    }
+    
+    for(p=0, lenp=yp.length; p<lenp; p++){
+        var elemp = yp[p];
+        if (minp === null || minp > elemp) minp = elemp;
+        if (maxp === null || maxp <elemp) maxp = elemp;
+    }
+    
+    rangep = (maxp - minp);
+    
+    ctxp.clearRect(0,0,canvasp.width,canvasp.height);
+    
+    ctxp.beginPath();
+    
+    ctxp.font = "15px Arial";
+    ctxp.fillText(maxp,0,15);
+    ctxp.fillText(minp,0,195); 
+    
+    for(p=0, lenp = yp.length; p < lenp; p++){
+        if(minp === null || minp > povp) minp = parseFloat(povp);
+        if(maxp === null || maxp < povp) maxp = parseFloat(povp);
+    }
+    
+    for(var p=0; p < yp.length; p++){
+        podatekSkaliranp = ((maxp - yp[p])/rangep)*yPxp;
+        ctxp.lineTo(xp[p], podatekSkaliranp);
+    }
+    
+    ctxp.stroke();
+    
+}
+
+</script>
+    
+</body>
+
+</html>
